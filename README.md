@@ -299,6 +299,7 @@ This can occur if the script encountered a non-terminating error before the summ
 IAM Consultant | Former Microsoft FastTrack Architect (15 years)
 
 [linkedin.com/in/albertjee](https://linkedin.com/in/albertjee) | [medium.com/@albertjee](https://medium.com/@albertjee)
+![CSA-600x600 (Small)](https://github.com/user-attachments/assets/82cdd672-cd66-461b-bb15-c6eb764db44c)
 
 ---
 
