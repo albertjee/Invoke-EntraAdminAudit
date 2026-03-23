@@ -301,7 +301,8 @@ IAM Consultant | Former Microsoft FastTrack Architect (15 years)
 [linkedin.com/in/albertjee](https://linkedin.com/in/albertjee) | [medium.com/@albertjee](https://medium.com/@albertjee)
 ![CSA-600x600 (Small)](https://github.com/user-attachments/assets/82cdd672-cd66-461b-bb15-c6eb764db44c)
 
----
+---<img width="72" height="72" alt="CSA-0 75in-96dpi-transparent" src="https://github.com/user-attachments/assets/45cd1ccc-a5fa-4e98-814c-cb0f33094ff9" />
+
 
 ## License
 
