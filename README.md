@@ -10,20 +10,106 @@ Companion article: *No Malware Required: How Iran Erased a Fortune 500 With Its 
 
 ---
 
+## Quick Start — First Run in 5 Minutes
+
+New to this script? Start here. Each step is one command with one expected result.
+
+**Step 1 — Check your PowerShell version**
+
+```powershell
+$PSVersionTable.PSVersion
+```
+
+Expected: Major version 5 or higher. PowerShell 7.x is recommended. PowerShell 5.1 is the minimum supported version.
+
+**Step 2 — Set execution policy if needed**
+
+```powershell
+Get-ExecutionPolicy
+```
+
+If the result is `Restricted`, run this once:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+```
+
+**Step 3 — Install required modules**
+
+```powershell
+Install-Module Microsoft.Graph.Authentication -Scope CurrentUser -Force
+Install-Module Microsoft.Graph.Identity.DirectoryManagement -Scope CurrentUser -Force
+```
+
+If you see a prompt about NuGet provider or untrusted repository, type Y to proceed. These are standard first-time installation prompts.
+
+If you are behind a corporate proxy and module installation fails silently, add the `-Proxy` parameter:
+
+```powershell
+Install-Module Microsoft.Graph.Authentication -Scope CurrentUser -Force -Proxy "http://your-proxy:port"
+```
+
+**Step 4 — Connect to Microsoft Graph**
+
+Your Tenant ID is in Entra ID Portal > Overview, or retrieve it with:
+
+```powershell
+(Get-MgOrganization).Id
+```
+
+Then connect:
+
+```powershell
+Connect-MgGraph -Scopes "Directory.Read.All","AuditLog.Read.All" -TenantId "yourtenant.onmicrosoft.com"
+```
+
+A browser window opens. Sign in with your Global Administrator account and accept the consent prompt. Return to PowerShell — you will see a welcome message.
+
+**Step 5 — Verify the connection**
+
+```powershell
+Get-MgContext
+```
+
+Expected: your account, tenant ID, and Scopes including `Directory.Read.All` and `AuditLog.Read.All`.
+
+**Step 6 — Run the audit**
+
+Both files must be in the same directory. Navigate to your download folder, then:
+
+```powershell
+.\Invoke-EntraAdminAudit-Lite.ps1
+```
+
+On first run you will see a disclaimer. Type `I AGREE` to proceed. This prompt does not appear again on the same machine.
+
+**Sample console output:**
+
+```
+[CRITICAL] john.smith@contoso.com — No sign-in in 847 days. Last sign-in: 2023-12-04.
+[HIGH]     svc-migration@contoso.com — Account has never signed in (provisioned 2024-01-15).
+[OK]       admin@contoso.com — Last sign-in 3 days ago. Manager attribute set.
+```
+
+Output files are written to your current directory: a color-coded console summary, a CSV, an HTML report, and a JSON log.
+
+---
+
 ## Scripts
 
 | Script | Edition | Availability |
-|---|---|---|
+| --- | --- | --- |
 | `Invoke-EntraAdminAudit-Lite.ps1` | **Community Preview** | Public — this repo |
 | `Invoke-EntraAdminAudit.ps1` | **Full** | Private — DM to request |
+| `Show-PoCDisclaimer.ps1` | **Shared Module** | Public — this repo. Required by both editions. Dot-sourced at runtime — must be in the same directory as whichever script you are running. Always download this file alongside the main script. |
 
-The **Community Preview** edition is designed for the article walkthrough and covers Global Administrator account hygiene. The **Full** edition audits MFA registration status on every GA account, checks PIM enablement, and detects Intune Multi Admin Approval configuration.
+The **Community Preview** edition covers Global Administrator account hygiene. The **Full** edition audits MFA registration status on every GA account, checks PIM enablement, and detects Intune Multi Admin Approval configuration.
 
 To request access to the Full edition, connect via LinkedIn DM: [linkedin.com/in/albertjee](https://linkedin.com/in/albertjee)
 
 ---
 
-## ⚠️ Critical Pre-Requisite — MFA on Global Administrator Accounts
+## Critical Pre-Requisite — MFA on Global Administrator Accounts
 
 The Community Preview surfaces GA account hygiene gaps — stale accounts, disabled accounts still holding GA, accounts that have never signed in, and missing manager attributes. If you are running the Community Preview, that is your full finding set.
 
@@ -53,8 +139,6 @@ Note: this script does not audit CA policy configuration. Step 2 is a manual fol
 
 ### Why This Gap Exists — The Identity Maturity Curve
 
-Why do so many organizations have this gap? It is not negligence. It is maturity.
-
 Most mid-market organizations sit below Level 2.0 on the Identity Maturity Curve. Reaching Level 2.0 requires more than having phishing-resistant MFA available — it requires 85% or more of Global Administrator accounts to have FIDO2 or Windows Hello for Business actually registered, with a CA policy enforcing it at every sign-in. In practice, most tenants audited with this script will not meet that bar on first run.
 
 This is not a criticism — it is a map. The script tells you exactly where you are. What you do next determines where you land on the curve.
@@ -74,10 +158,8 @@ README.md                         # This file
                                   # Verify before running — see Integrity Verification below
 
 /samples                          # Sample HTML report output
-                                  # (placeholder — sample report added post-publication)
 
 /docs                             # Supporting documentation
-                                  # (placeholder — companion article PDF added post-publication)
 ```
 
 ---
@@ -112,16 +194,18 @@ This matters. If someone copies and modifies this script before distributing it,
 
 It also flags accounts with **no manager attribute set** — a governance gap that breaks the ownership chain for privileged identities.
 
-For a detailed side-by-side comparison of Community Preview vs Full edition output with real-world examples, see `/docs/SampleOutput_Comparison.md` (placeholder — content added post-publication).
+For a detailed side-by-side comparison of Community Preview vs Full edition output with real-world examples, see `/docs/SampleOutput_Comparison.md`.
 
 ### What It Does Not Check (Full Edition Only)
 
-- Phishing-resistant MFA registration status
-- PIM enablement status for the Global Administrator role
-- Standing (permanent) GA assignments outside the PIM eligible model
-- Intune Multi Admin Approval (MAA) configuration
+* Phishing-resistant MFA registration status
+* PIM enablement status for the Global Administrator role
+* Standing (permanent) GA assignments outside the PIM eligible model
+* Intune Multi Admin Approval (MAA) configuration
 
 ### Requirements
+
+**PowerShell version:** 5.1 minimum. PowerShell 7.x recommended for performance and module compatibility.
 
 **Authentication:** Interactive (`Connect-MgGraph`). No app registration required.
 
@@ -130,16 +214,24 @@ For a detailed side-by-side comparison of Community Preview vs Full edition outp
 **Licensing:** `SignInActivity` requires **Entra ID P1 or P2**. On tenants running Entra ID Free or standalone Office 365 plans without a Microsoft 365 E3/E5/Business Premium bundle, `SignInActivity` returns null. Affected accounts are rated HIGH with a note rather than generating false CRITICAL ratings. If your tenant includes Microsoft 365 E3 or higher, Entra ID P1 is already bundled — `SignInActivity` will be available without additional licensing.
 
 **Microsoft Graph permissions (delegated):**
-- `Directory.Read.All`
-- `AuditLog.Read.All`
+
+* `Directory.Read.All`
+* `AuditLog.Read.All`
 
 **PowerShell modules — install before first run:**
+
 ```powershell
 Install-Module Microsoft.Graph.Authentication -Scope CurrentUser
-Install-Module Microsoft.Graph.Identity.Governance -Scope CurrentUser
+Install-Module Microsoft.Graph.Identity.DirectoryManagement -Scope CurrentUser
 ```
 
 **Microsoft Graph SDK version:** v2 (`Microsoft.Graph`) — not v1 or beta.
+
+**Network:** Internet access to `graph.microsoft.com` required. If behind a corporate proxy, set:
+
+```powershell
+$env:HTTPS_PROXY = "http://your-proxy:port"
+```
 
 ### Built-In Help
 
@@ -172,22 +264,25 @@ The default stale threshold is **90 days**. Override at launch with `-StaleThres
 ### Usage Examples
 
 ```powershell
-# Example 1 — Basic run, defaults, CSV to current directory
+# Example 1 — Basic run, defaults, output to current directory
 .\Invoke-EntraAdminAudit-Lite.ps1
 
 # Example 2 — Override stale threshold to 30 days
 .\Invoke-EntraAdminAudit-Lite.ps1 -StaleThresholdDays 30
 
-# Example 3 — Override threshold and specify CSV export path
+# Example 3 — Override threshold and specify export path
 .\Invoke-EntraAdminAudit-Lite.ps1 -StaleThresholdDays 60 -ExportPath "C:\Audits\ga_audit.csv"
+
+# Example 4 — View full help before running
+Get-Help .\Invoke-EntraAdminAudit-Lite.ps1 -Full
 ```
 
 ### Output
 
-- **Color-coded console** — CRITICAL (red), HIGH (yellow), OK (green), INFO (gray)
-- **Structured JSON log** — timestamped `.log` file, directly ingestible by Microsoft Sentinel or any SIEM
-- **CSV export** — timestamped file in current directory (or `-ExportPath`)
-- **HTML report** — timestamped file in current directory with scorecard, findings table, and remediation reference. See `/samples` for an example (placeholder — sample report added post-publication).
+* **Color-coded console** — CRITICAL (red), HIGH (yellow), OK (green), INFO (gray)
+* **Structured JSON log** — timestamped `.log` file, directly ingestible by Microsoft Sentinel or any SIEM
+* **CSV export** — timestamped file in current directory (or `-ExportPath`)
+* **HTML report** — timestamped file in current directory with scorecard, findings table, and remediation reference. See `/samples` for an example.
 
 ### Disclaimer
 
@@ -211,21 +306,23 @@ This matters because not all MFA methods offer the same protection. Standard met
 
 The script does not change, enable, or register anything. It reads and reports. What you do with that report is the remediation decision.
 
-- **MFA registration audit** — reads what authentication methods are registered against each GA account and flags accounts missing phishing-resistant methods (FIDO2 or Windows Hello for Business). The script does not change MFA configuration.
-- **PIM enablement** for the Global Administrator role — detects whether the role is governed by PIM or whether all GAs have standing permanent access
-- **Standing GA assignments** outside the PIM eligible model — accounts with always-on GA rights
-- **Role-assignable group detection** — flags GA role assignments via groups, which bypass per-user sign-in and MFA audit logic
-- **Intune Multi Admin Approval** — detects whether a single compromised GA can execute a mass device wipe unilaterally
+* **MFA registration audit** — reads what authentication methods are registered against each GA account and flags accounts missing phishing-resistant methods (FIDO2 or Windows Hello for Business). The script does not change MFA configuration.
+* **PIM enablement** for the Global Administrator role — detects whether the role is governed by PIM or whether all GAs have standing permanent access
+* **Standing GA assignments** outside the PIM eligible model — accounts with always-on GA rights
+* **Role-assignable group detection** — flags GA role assignments via groups, which bypass per-user sign-in and MFA audit logic
+* **Intune Multi Admin Approval** — detects whether a single compromised GA can execute a mass device wipe unilaterally
 
 **Additional requirements (Full edition):**
-- `PrivilegedAccess.Read.AzureAD` (delegated)
-- `DeviceManagementConfiguration.Read.All` (delegated)
-- `Microsoft.Graph.DeviceManagement` module
-- `Microsoft.Graph.Reports` module
+
+* `PrivilegedAccess.Read.AzureAD` (delegated)
+* `DeviceManagementConfiguration.Read.All` (delegated)
+* `Microsoft.Graph.DeviceManagement` module
+* `Microsoft.Graph.Reports` module
 
 **Full edition also supports unattended execution:**
-- Service Principal with certificate (`-ClientId`, `-TenantId`, `-CertificateThumbprint`)
-- Managed Identity (auto-detected in Azure Automation)
+
+* Service Principal with certificate (`-ClientId`, `-TenantId`, `-CertificateThumbprint`)
+* Managed Identity (auto-detected in Azure Automation)
 
 To request the Full edition: [linkedin.com/in/albertjee](https://linkedin.com/in/albertjee) — connect and send a DM.
 
@@ -255,24 +352,42 @@ The `-ExpandProperty` syntax for this call is documented in the inline comments 
 
 ## Troubleshooting
 
+**`cannot be loaded because running scripts is disabled`**
+Execution policy is set to Restricted. Run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force`
+
+**`The term 'Connect-MgGraph' is not recognized`**
+Microsoft Graph module not installed. Run the module install commands in Step 3 of Quick Start above.
+
+**`Show-PoCDisclaimer.ps1 cannot be found`**
+Both script files must be in the same directory. Navigate to the folder containing both files before running.
+
+**`Insufficient privileges` or 403 errors**
+Your account is missing one or more Graph permissions, or is not a Global Administrator. Disconnect and reconnect with the full scope list: `Disconnect-MgGraph`, then repeat Step 4 of Quick Start.
+
+**`Browser doesn't open for sign-in`**
+PowerShell is running as SYSTEM or in a remote session without an interactive desktop. Run the script from a local, interactive PowerShell session.
+
 **`SignInActivity` returns null for all accounts**
 Your tenant does not have Entra ID P1 or P2 licensing. Affected accounts are rated HIGH with a licensing note — not false CRITICAL. Upgrade to P1/P2 to enable sign-in activity reporting.
 
 **MFA registration check returns "data unavailable" (Full edition only)**
 Verify `AuditLog.Read.All` is consented for your session. Run `Get-MgContext` and check the `Scopes` property. If the scope is missing, disconnect and reconnect with the full scope list.
 
-**PIM query throws an error**
-Verify `PrivilegedAccess.Read.AzureAD` is consented (Full edition only). If PIM has never been activated in your tenant, the query returns empty — the script handles this gracefully and rates it CRITICAL.
+**PIM query throws an error (Full edition only)**
+Verify `PrivilegedAccess.Read.AzureAD` is consented. If PIM has never been activated in your tenant, the query returns empty — the script handles this gracefully and rates it CRITICAL.
 
 **HTML report shows zeros in the scorecard**
-This can occur if the script encountered a non-terminating error before the summary section. Check the JSON log file for error entries. The HTML report calculates counts internally from `$Results` — if `$Results` is empty, verify the Graph connection succeeded and the GA role has members.
+Check the JSON log file for error entries. The HTML report calculates counts from `$Results` — if `$Results` is empty, verify the Graph connection succeeded and the GA role has members.
+
+**Corporate proxy — Graph API calls fail silently**
+Set your proxy environment variable before running: `$env:HTTPS_PROXY = "http://your-proxy:port"`. If module installation also fails, add `-Proxy "http://your-proxy:port"` to your `Install-Module` commands.
 
 ---
 
 ## Risk Ratings
 
 | Rating | Meaning |
-|---|---|
+| --- | --- |
 | **CRITICAL** | Matches the Stryker attack profile. Remediate today. |
 | **HIGH** | Material risk. Schedule remediation this sprint. |
 | **OK** | Control present. Continue monitoring. |
@@ -283,7 +398,7 @@ This can occur if the script encountered a non-terminating error before the summ
 ## Remediation Reference
 
 | Control | Portal Path | Priority |
-|---|---|---|
+| --- | --- | --- |
 | Remove orphaned / disabled GA accounts | Entra ID Portal > Roles > Global Administrator > Assignments | TODAY |
 | Register phishing-resistant MFA on all GA accounts | Entra ID Portal > Users > [Account] > Authentication Methods | TODAY |
 | Enable PIM for Global Administrator | Entra ID Portal > Identity Governance > PIM > Azure AD Roles | TODAY |
